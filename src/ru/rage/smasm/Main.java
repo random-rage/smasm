@@ -1,14 +1,19 @@
 package ru.rage.smasm;
 
-import java.io.FileNotFoundException;
+import ru.rage.spoml.*;
+
 import java.io.FileOutputStream;
+import java.io.StringWriter;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Paths;
-import java.util.List;
+import java.util.Formatter;
 
-public class Main {
+public class Main
+{
+    private static final Charset FILE_CHARSET = StandardCharsets.UTF_8;
+
     public static void main(String[] args)
     {
         if (args.length < 1)
@@ -18,8 +23,9 @@ public class Main {
         }
 
         String program;
-        try {
-            program = new String(Files.readAllBytes(Paths.get(args[0])), StandardCharsets.UTF_8);
+        try
+        {
+            program = new String(Files.readAllBytes(Paths.get(args[0])), FILE_CHARSET);
         }
         catch (Exception ex)
         {
@@ -28,10 +34,10 @@ public class Main {
         }
 
         Parser parser;
-        List<Command> cmds;
-        try {
+        try
+        {
             parser = new Parser(program);
-            cmds = parser.parse();
+            parser.parse();
         }
         catch (Exception ex)
         {
@@ -39,23 +45,58 @@ public class Main {
             return;
         }
 
-        Translator translator = new Translator(cmds, parser.hasData() ? parser.getData() : null);
-        try {
-            translator.analyze();
+        Translator translator;
+        try
+        {
+            translator = new Translator(parser.getIncludes(),
+                                        parser.getData(),
+                                        parser.getCode(),
+                                        parser.getExternals());
+            translator.compile();
         }
         catch (Exception ex)
         {
-            System.out.println("Analyzing error: " + ex.getMessage());
+            System.out.println("Compiling error: " + ex.getMessage());
             return;
         }
-        try {
-            FileOutputStream fout = new FileOutputStream("output.sme");
-            fout.write(translator.compile());
-            fout.close();
-            if (parser.hasData())
+
+        try
+        {
+            FileOutputStream fout;
+            Formatter formatter;
+
+            if (translator.hasIncludes())
+            {
+                formatter = new Formatter();
+                for (Include inc : translator.getIncludes())
+                    formatter.format("%s\n", inc.toString());
+
+                fout = new FileOutputStream("output.smi");
+                fout.write(formatter.toString().getBytes(FILE_CHARSET));
+                fout.close();
+            }
+            if (translator.hasData())
             {
                 fout = new FileOutputStream("output.smd");
-                fout.write(translator.getData());
+                for (Data data : translator.getData())
+                    fout.write(data.toByteArray());
+                fout.close();
+            }
+            if (translator.hasCode())
+            {
+                fout = new FileOutputStream("output.smc");
+                for (Command cmd : translator.getCode())
+                    fout.write(cmd.toByteArray());
+                fout.close();
+            }
+            if (translator.hasExterns())
+            {
+                formatter = new Formatter();
+                for (Extern extern : translator.getExterns())
+                    formatter.format("%s\n", extern.toString());
+
+                fout = new FileOutputStream("output.sme");
+                fout.write(formatter.toString().getBytes(FILE_CHARSET));
                 fout.close();
             }
         }

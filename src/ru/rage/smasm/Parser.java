@@ -1,51 +1,40 @@
 package ru.rage.smasm;
 
-import java.util.HashMap;
-import java.util.LinkedList;
+import ru.rage.spoml.*;
+
+import java.util.ArrayList;
 import java.util.List;
 
 enum Segment
 {
-    CODE,
-    DATA
+    DATA,
+    CODE
 }
 
 class Parser
 {
-    private static final HashMap<String, CmdType> _cmds = new HashMap<String, CmdType>()
-    {{
-        put("NOP", CmdType.NOP);
-        put("ADD", CmdType.ADD);
-        put("SUB", CmdType.SUB);
-        put("INC", CmdType.INC);
-        put("DEC", CmdType.DEC);
-        put("LDR", CmdType.LDR);
-        put("STR", CmdType.STR);
-        put("IN",  CmdType.IN);
-        put("OUT", CmdType.OUT);
-        put("JMP", CmdType.JMP);
-        put("IFZ", CmdType.IFZ);
-        put("IFN", CmdType.IFN);
-        put("HLT", CmdType.HLT);
-    }};
-    private String[] lines;
-    private LinkedList<Data> _data;
+    private String[]           lines;
+    private ArrayList<Include> _includes;
+    private ArrayList<Data>    _data;
+    private ArrayList<Command> _cmds;
+    private ArrayList<Extern>  _externs;
 
     Parser(String program)
     {
         lines = preprocess(program).split("[\\r\\n]+");
+        _includes = new ArrayList<>();
+        _data = new ArrayList<>();
+        _cmds = new ArrayList<>();
+        _externs = new ArrayList<>();
     }
 
-    boolean hasData()
-    {
-        return (_data != null) && (_data.size() > 0);
-    }
-
-    List<Data> getData()
-    {
-        return _data;
-    }
-
+    /**
+     * Удаляет комментарии и лишние символы
+     *
+     * @param source Исходная строка
+     *
+     * @return Чистый код
+     */
     private static String preprocess(String source)
     {
         StringBuilder result = new StringBuilder();
@@ -78,38 +67,61 @@ class Parser
         return result.toString();
     }
 
-    List<Command> parse() throws Exception
+    void parse() throws Exception
     {
-        LinkedList<Command> cmds = new LinkedList<>();
         Segment curSeg = Segment.CODE;
+        Extern curExt = null;
 
-        for (String line: lines) {
+        for (String line : lines)
+        {
             line = line.replace('\t', ' ').trim();
 
-            switch (line) {
+            switch (line)
+            {
+                case ".data":
+                    curSeg = Segment.DATA;
+                    break;
                 case ".code":
                     curSeg = Segment.CODE;
                     break;
-                case ".data":
-                    curSeg = Segment.DATA;
-                    _data = new LinkedList<>();
+                case "end extern":
+                    if (curExt == null)
+                        throw new Exception("Extern must be declared before end");
+                    curExt.setEnd(_cmds.size());
+                    curExt = null;
                     break;
+
                 default:
-                    String[] lexeme = line.split("[ ]+");
-                    if (curSeg == Segment.CODE) {
-                        if (lexeme[0].endsWith(":")) {
+                    String[] lexeme = line.split("(?<!\\b[ ]['])[ ]+");
+                    if (curSeg == Segment.CODE)
+                    {
+                        if (lexeme[0].equals("extern"))
+                        {
+                            if (curExt != null)
+                                curExt.setEnd(_cmds.size());
+
+                            curExt = new Extern(lexeme[1], _cmds.size());
+                            _externs.add(curExt);
+                        }
+                        else if (lexeme[0].equals("include"))
+                            _includes.add(new Include(lexeme[1], lexeme[2], _cmds.size()));
+                        else if (lexeme[0].endsWith(":"))
+                        {
                             String label = lexeme[0].replace(":", "");
                             if (lexeme.length == 3)
-                                cmds.add(new Command(_cmds.get(lexeme[1]), new Argument(lexeme[2]), label));
+                                _cmds.add(new Command(lexeme[1], lexeme[2], label));
                             else if (lexeme.length == 2)
-                                cmds.add(new Command(_cmds.get(lexeme[1]), new Argument(null)));
+                                _cmds.add(new Command(lexeme[1], null));
                             else
                                 throw new Exception("Label without command");
-                        } else if (lexeme.length == 2)
-                            cmds.add(new Command(_cmds.get(lexeme[0]), new Argument(lexeme[1])));
+                        }
+                        else if (lexeme.length == 2)
+                            _cmds.add(new Command(lexeme[0], lexeme[1]));
                         else
-                            cmds.add(new Command(_cmds.get(lexeme[0]), new Argument(null)));
-                    } else {
+                            _cmds.add(new Command(lexeme[0], null));
+                    }
+                    else
+                    {
                         if (lexeme.length == 2)
                             _data.add(new Data(lexeme[0], lexeme[1]));
                         else if (lexeme.length == 3)
@@ -120,6 +132,27 @@ class Parser
                     break;
             }
         }
-        return cmds;
+        if (curExt != null)
+            curExt.setEnd(_cmds.size());
+    }
+
+    List<Data> getData()
+    {
+        return _data;
+    }
+
+    List<Command> getCode()
+    {
+        return _cmds;
+    }
+
+    List<Include> getIncludes()
+    {
+        return _includes;
+    }
+
+    List<Extern> getExternals()
+    {
+        return _externs;
     }
 }
