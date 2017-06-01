@@ -3,16 +3,12 @@ package ru.rage.smasm;
 import ru.rage.spoml.*;
 
 import java.io.FileOutputStream;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Formatter;
 
 public class Main
 {
-    private static final Charset FILE_CHARSET = StandardCharsets.UTF_8;
-
     public static void main(String[] args)
     {
         if (args.length < 1)
@@ -24,7 +20,7 @@ public class Main
         String program;
         try
         {
-            program = new String(Files.readAllBytes(Paths.get(args[0])), FILE_CHARSET);
+            program = new String(Files.readAllBytes(Paths.get(args[0])), Include.FILE_CHARSET);
         }
         catch (Exception ex)
         {
@@ -70,7 +66,7 @@ public class Main
                 for (Include inc : translator.getIncludes())
                     formatter.format("%s\n", inc.toString());
                 fout = new FileOutputStream(getFileBasename(args[0]) + Include.FILE_EXT);
-                fout.write(formatter.toString().getBytes(FILE_CHARSET));
+                fout.write(formatter.toString().getBytes(Include.FILE_CHARSET));
                 fout.close();
             }
             if (translator.hasData())
@@ -94,7 +90,7 @@ public class Main
                     formatter.format("%s\n", extern.toString());
 
                 fout = new FileOutputStream(getFileBasename(args[0]) + Extern.FILE_EXT);
-                fout.write(formatter.toString().getBytes(FILE_CHARSET));
+                fout.write(formatter.toString().getBytes(Include.FILE_CHARSET));
                 fout.close();
             }
         }
