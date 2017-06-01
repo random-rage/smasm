@@ -5,15 +5,10 @@ import ru.rage.spoml.*;
 import java.util.ArrayList;
 import java.util.List;
 
-enum Segment
-{
-    DATA,
-    CODE
-}
-
 class Parser
 {
-    private String[]           lines;
+    private String[]           _lines;
+    private int                _curAddr;
     private ArrayList<Include> _includes;
     private ArrayList<Data>    _data;
     private ArrayList<Command> _cmds;
@@ -21,11 +16,12 @@ class Parser
 
     Parser(String program)
     {
-        lines = preprocess(program).split("[\\r\\n]+");
+        _lines = preprocess(program).split("[\\r\\n]+");
         _includes = new ArrayList<>();
         _data = new ArrayList<>();
         _cmds = new ArrayList<>();
         _externs = new ArrayList<>();
+        _curAddr = 0;
     }
 
     /**
@@ -72,7 +68,7 @@ class Parser
         Segment curSeg = Segment.CODE;
         Extern curExt = null;
 
-        for (String line : lines)
+        for (String line : _lines)
         {
             line = line.replace('\t', ' ').trim();
 
@@ -87,7 +83,7 @@ class Parser
                 case "end extern":
                     if (curExt == null)
                         throw new Exception("Extern must be declared before end");
-                    curExt.setEnd(_cmds.size());
+                    curExt.setEnd(_curAddr);
                     curExt = null;
                     break;
 
@@ -98,27 +94,27 @@ class Parser
                         if (lexeme[0].equals("extern"))
                         {
                             if (curExt != null)
-                                curExt.setEnd(_cmds.size());
+                                curExt.setEnd(_curAddr);
 
-                            curExt = new Extern(lexeme[1], _cmds.size());
+                            curExt = new Extern(lexeme[1], _curAddr);
                             _externs.add(curExt);
                         }
                         else if (lexeme[0].equals("include"))
-                            _includes.add(new Include(lexeme[1], lexeme[2], _cmds.size()));
+                            _includes.add(new Include(lexeme[1], lexeme[2], _curAddr));
                         else if (lexeme[0].endsWith(":"))
                         {
                             String label = lexeme[0].replace(":", "");
                             if (lexeme.length == 3)
-                                _cmds.add(new Command(lexeme[1], lexeme[2], label));
+                                addCommand(new Command(lexeme[1], lexeme[2], label));
                             else if (lexeme.length == 2)
-                                _cmds.add(new Command(lexeme[1], null));
+                                addCommand(new Command(lexeme[1], null));
                             else
                                 throw new Exception("Label without command");
                         }
                         else if (lexeme.length == 2)
-                            _cmds.add(new Command(lexeme[0], lexeme[1]));
+                            addCommand(new Command(lexeme[0], lexeme[1]));
                         else
-                            _cmds.add(new Command(lexeme[0], null));
+                            addCommand(new Command(lexeme[0], null));
                     }
                     else
                     {
@@ -133,7 +129,13 @@ class Parser
             }
         }
         if (curExt != null)
-            curExt.setEnd(_cmds.size());
+            curExt.setEnd(_curAddr);
+    }
+
+    private void addCommand(Command cmd)
+    {
+        _cmds.add(cmd);
+        _curAddr += cmd.length();
     }
 
     List<Data> getData()

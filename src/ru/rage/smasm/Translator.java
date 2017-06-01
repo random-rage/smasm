@@ -127,19 +127,19 @@ class Translator
 
     boolean hasData()
     {
-        return _data.size() > 0;
+        return !_data.isEmpty();
     }
     boolean hasCode()
     {
-        return _cmds.size() > 0;
+        return !_cmds.isEmpty();
     }
     boolean hasIncludes()
     {
-        return _includes.size() > 0;
+        return !_includes.isEmpty();
     }
     boolean hasExterns()
     {
-        return _externs.size() > 0;
+        return !_externs.isEmpty();
     }
 
     List<Command> getCode()

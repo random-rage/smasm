@@ -3,7 +3,6 @@ package ru.rage.smasm;
 import ru.rage.spoml.*;
 
 import java.io.FileOutputStream;
-import java.io.StringWriter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -18,7 +17,7 @@ public class Main
     {
         if (args.length < 1)
         {
-            System.out.println("Not enough arguments");
+            System.out.println("Usage: smasm <source file name>");
             return;
         }
 
@@ -29,7 +28,7 @@ public class Main
         }
         catch (Exception ex)
         {
-            System.out.println("Reading error: " + ex.getMessage());
+            System.out.printf("Reading error: %s\n", ex);
             return;
         }
 
@@ -41,7 +40,7 @@ public class Main
         }
         catch (Exception ex)
         {
-            System.out.println("Parsing error: " + ex.getMessage());
+            System.out.printf("Parsing error: %s\n", ex);
             return;
         }
 
@@ -56,7 +55,7 @@ public class Main
         }
         catch (Exception ex)
         {
-            System.out.println("Compiling error: " + ex.getMessage());
+            System.out.printf("Compiling error: %s\n", ex);
             return;
         }
 
@@ -70,21 +69,20 @@ public class Main
                 formatter = new Formatter();
                 for (Include inc : translator.getIncludes())
                     formatter.format("%s\n", inc.toString());
-
-                fout = new FileOutputStream("output.smi");
+                fout = new FileOutputStream(getFileBasename(args[0]) + Include.FILE_EXT);
                 fout.write(formatter.toString().getBytes(FILE_CHARSET));
                 fout.close();
             }
             if (translator.hasData())
             {
-                fout = new FileOutputStream("output.smd");
+                fout = new FileOutputStream(getFileBasename(args[0]) + Data.FILE_EXT);
                 for (Data data : translator.getData())
                     fout.write(data.toByteArray());
                 fout.close();
             }
             if (translator.hasCode())
             {
-                fout = new FileOutputStream("output.smc");
+                fout = new FileOutputStream(getFileBasename(args[0]) + Command.FILE_EXT);
                 for (Command cmd : translator.getCode())
                     fout.write(cmd.toByteArray());
                 fout.close();
@@ -95,14 +93,21 @@ public class Main
                 for (Extern extern : translator.getExterns())
                     formatter.format("%s\n", extern.toString());
 
-                fout = new FileOutputStream("output.sme");
+                fout = new FileOutputStream(getFileBasename(args[0]) + Extern.FILE_EXT);
                 fout.write(formatter.toString().getBytes(FILE_CHARSET));
                 fout.close();
             }
         }
         catch (Exception ex)
         {
-            System.out.println("Translation error: " + ex.getMessage());
+            System.out.printf("Translation error: %s\n", ex);
         }
+    }
+
+    private static String getFileBasename(String path)
+    {
+        String name = Paths.get(path).getFileName().toString();
+        int dot = name.lastIndexOf('.');
+        return (dot < 0) ? name : name.substring(0, dot);
     }
 }
