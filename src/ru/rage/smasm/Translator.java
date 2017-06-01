@@ -7,8 +7,6 @@ import java.util.List;
 
 class Translator
 {
-    private static final int DATA_MEMORY_SIZE = 256;
-
     private List<Include> _includes;
     private List<Data>    _data;
     private List<Command> _cmds;
@@ -37,12 +35,8 @@ class Translator
         HashMap<String, Integer> _labels = new HashMap<>();
         if (hasData())
         {
-            int freeMem = DATA_MEMORY_SIZE;
             for (Data d : _data)
             {
-                freeMem -= d.getLength();
-                if (freeMem < 0)
-                    throw new Exception("Not enough memory for data \"" + d.getName() + "\"");
                 if (d.getName().contains("[") || d.getName().contains("]"))
                     throw new Exception("Data name contains illegal chars\"" + d.getName() + "\"");
             }
