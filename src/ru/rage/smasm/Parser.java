@@ -107,7 +107,7 @@ class Parser
                             if (lexeme.length == 3)
                                 addCommand(new Command(lexeme[1], lexeme[2], label));
                             else if (lexeme.length == 2)
-                                addCommand(new Command(lexeme[1], null));
+                                addCommand(new Command(lexeme[1], null, label));
                             else
                                 throw new Exception("Label without command");
                         }

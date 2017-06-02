@@ -41,14 +41,14 @@ class Translator
                     throw new Exception("Data name contains illegal chars\"" + d.getName() + "\"");
             }
         }
-        Command cmd;
         for (int i = 0; i < _cmds.size(); i++)
         {
-            cmd = _cmds.get(i);
-
+            Command cmd = _cmds.get(i);
             if (cmd.hasLabel())
                 _labels.put(cmd.getLabel(), i);
-
+        }
+        for (Command cmd : _cmds)
+        {
             switch (cmd.getType())
             {
                 case NOP:
